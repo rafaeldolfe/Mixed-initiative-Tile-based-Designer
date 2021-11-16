@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08db5c372483f1f4ea50bd2198835777, type: 3}
+  m_Name: ForkKeyMultiRule1
+  m_EditorClassIdentifier: 
+  condition:
+    nodes:
+    - isTerminal: 0
+      type: 5
+      ruleApplicationNumber: 0
+      id: 
+      subordinates:
+      - pointsTo: key
+        isTightCoupling: 0
+    - isTerminal: 1
+      type: 9
+      ruleApplicationNumber: 1
+      id: key
+      subordinates: []
+  result:
+    nodes:
+    - isTerminal: 0
+      type: 5
+      ruleApplicationNumber: 0
+      id: 
+      subordinates:
+      - pointsTo: key
+        isTightCoupling: 0
+    - isTerminal: 1
+      type: 13
+      ruleApplicationNumber: 2
+      id: key
+      subordinates:
+      - pointsTo: lock
+        isTightCoupling: 0
+    - isTerminal: 1
+      type: 14
+      ruleApplicationNumber: 3
+      id: lock
+      subordinates:
+      - pointsTo: keymulti
+        isTightCoupling: 1
+      - pointsTo: hook
+        isTightCoupling: 0
+    - isTerminal: 1
+      type: 9
+      ruleApplicationNumber: 1
+      id: keymulti
+      subordinates: []
+    - isTerminal: 0
+      type: 6
+      ruleApplicationNumber: 4
+      id: hook
+      subordinates: []

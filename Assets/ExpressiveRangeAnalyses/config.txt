@@ -1,0 +1,11 @@
+ten-scenarios
+linear-joris-original-2000
+parallel-joris-original-2000
+combination-joris-original-2000
+linear-joris-equalized-2000
+parallel-joris-equalized-2000
+combination-joris-equalized-2000
+linear-joris-massive-2000
+parallel-joris-massive-2000
+combination-joris-massive-2000
+linear-rafael-counterexample-2000

@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25e119d56eaa63a43ad7a27f1f3f223c, type: 3}
+  m_Name: 7x4_obstacle_block
+  m_EditorClassIdentifier: 
+  m_Sprite: {fileID: 21300000, guid: d6a40c13b566f804fa822a4e6f8c3cbb, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Transform:
+    e00: 1
+    e01: 0
+    e02: 0
+    e03: 0
+    e10: 0
+    e11: 1
+    e12: 0
+    e13: 0
+    e20: 0
+    e21: 0
+    e22: 1
+    e23: 0
+    e30: 0
+    e31: 0
+    e32: 0
+    e33: 1
+  m_InstancedGameObject: {fileID: 0}
+  m_Flags: 1
+  m_ColliderType: 1
+  width: 7
+  height: 4
+  RotatedVersion: 1
+  type: 0
+  possibleBlocks:
+  - {fileID: 11400000, guid: c76a7ba36c138464b9cd4046b7bddd0c, type: 2}
+  - {fileID: 11400000, guid: fce65095cee7fd04fb49c92be5b5a14c, type: 2}
+  - {fileID: 11400000, guid: d32f5197607d33b44ab38cdfec661448, type: 2}
+  - {fileID: 11400000, guid: 1d1136021083fad458b91ee3843d5707, type: 2}
+  - {fileID: 11400000, guid: f13cb2da33e68a14897d9b54e97a3a7b, type: 2}
+  - {fileID: 11400000, guid: 5f5ac6b99afd6724a86d284ffe8d7fa8, type: 2}
+  - {fileID: 11400000, guid: e781fed0ab5752041b37070f4d4d1b48, type: 2}
+  - {fileID: 11400000, guid: cc818a9f8365fd240a17798975220739, type: 2}
+  - {fileID: 11400000, guid: a2a5eaa1a71064848bf76bb60a10db0d, type: 2}
+  testBlock: {fileID: 0}
+  invertedVersion: {fileID: 11400000, guid: c573f180b4926a8419ecd2eb3d5c7294, type: 2}

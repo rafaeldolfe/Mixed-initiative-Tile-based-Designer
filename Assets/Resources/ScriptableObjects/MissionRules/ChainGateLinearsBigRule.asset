@@ -1,0 +1,194 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08db5c372483f1f4ea50bd2198835777, type: 3}
+  m_Name: ChainGateLinearsBigRule
+  m_EditorClassIdentifier: 
+  isOriginalRule: 0
+  condition:
+    nodes:
+    - isTerminal: 0
+      type: 17
+      ruleApplicationNumber: 0
+      id: 
+      subordinates:
+      - pointsTo: gate
+        isTightCoupling: 0
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 16
+      ruleApplicationNumber: 1
+      id: gate
+      subordinates: []
+  result:
+    nodes:
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 0
+      id: 
+      subordinates:
+      - pointsTo: linear1
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 2
+      id: linear1
+      subordinates:
+      - pointsTo: linear2
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 3
+      id: linear2
+      subordinates:
+      - pointsTo: linear3
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 4
+      id: linear3
+      subordinates:
+      - pointsTo: linear4
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 5
+      id: linear4
+      subordinates:
+      - pointsTo: linear5
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 6
+      id: linear5
+      subordinates:
+      - pointsTo: linear6
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 7
+      id: linear6
+      subordinates:
+      - pointsTo: linear7
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 8
+      id: linear7
+      subordinates:
+      - pointsTo: linear8
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 9
+      id: linear8
+      subordinates:
+      - pointsTo: linear9
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 10
+      id: linear9
+      subordinates:
+      - pointsTo: linear10
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 11
+      id: linear10
+      subordinates:
+      - pointsTo: linear11
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 12
+      id: linear11
+      subordinates:
+      - pointsTo: linear12
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 13
+      id: linear12
+      subordinates:
+      - pointsTo: linear13
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 14
+      id: linear13
+      subordinates:
+      - pointsTo: linear14
+        isTightCoupling: 1
+        relationship:
+          start: 0
+          end: 0
+          id: 
+    - isTerminal: 0
+      type: 4
+      ruleApplicationNumber: 1
+      id: linear14
+      subordinates: []
