@@ -39,13 +39,13 @@ The image below is a summary of the process taken from the master thesis based o
 
 ## Install
 
-This project uses Unity3D. Unity can be downloaded from their official website. The MTD uses Unity version 2020.3.16f1 but should work for at least most versions after 2019.
+This project uses Unity3D. Unity can be downloaded from their [official website](https://unity3d.com/get-unity/download). The MTD uses Unity version 2020.3.16f1 but should work for at least most versions after 2019.
 
-There should be no need for installs. Open the repo with Unity and it should work off the shelf.
+There should be no need for installs apart from Unity. Open the repo with Unity and it should work off the shelf.
 
 ## Usage
 
-There are five primary ways of modifying the procedural generator.
+There are five primary ways of modifying the output of the procedural generator.
 
 1. Adding, modifying or removing mission grammar rules.
 2. Adding, modifying or removing shape grammar rules.
