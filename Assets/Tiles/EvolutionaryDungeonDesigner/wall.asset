@@ -31,8 +31,17 @@ MonoBehaviour:
     e31: 0
     e32: 0
     e33: 1
-  m_InstancedGameObject: {fileID: 0}
+  m_InstancedGameObject: {fileID: 7913403084173202067, guid: c846b4ad4b0d1ef4697ab2bba49cbc56,
+    type: 3}
   m_Flags: 1
   m_ColliderType: 1
-  walkability: 0
   tileType: 1
+  specialNodeType: 0
+  walkability: 0
+  offset: {x: 0.5, y: 0.5, z: 0}
+  prefabs:
+  - {fileID: 7913403084173202067, guid: bf806d95410c5ee4e86ef0d583679ef7, type: 3}
+  numberToLikelihood:
+    keyData: 01000000
+    valueData:
+    - 1

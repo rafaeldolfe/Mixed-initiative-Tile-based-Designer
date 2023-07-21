@@ -1,53 +1,27 @@
-﻿using MissionGrammar;
-using Sirenix.OdinInspector;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using Unity.EditorCoroutines.Editor;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.Tilemaps;
-
-namespace ShapeGrammar
+﻿namespace ShapeGrammar
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Linq;
+    using MissionGrammar;
+    using Sirenix.OdinInspector;
+    using Unity.EditorCoroutines.Editor;
+    using UnityEditor;
+    using UnityEngine;
+    using UnityEngine.Tilemaps;
+
     public class ShapeGenerator : MonoBehaviour
     {
-        [Serializable]
-        public class RoomTilePairing
-        {
-            public RoomType roomType;
-            public Tile tile;
-        }
-
-        [Serializable]
-        public class MissionPriorityPairing
-        {
-            public MissionName missionName;
-
-            /// <summary>
-            /// The higher the priority, the faster the room type is
-            /// chosen to be generated out of all other subordinates of a node.
-            /// </summary>
-            public int priority;
-        }
-
-        private MissionGenerator mg;
-
-        private Cell[,] grid = new Cell[Constants.GRAPH_GRID_WIDTH, Constants.GRAPH_GRID_HEIGHT];
-        private List<Cell> generatedSpaces = new List<Cell>();
-        private Dictionary<MissionNode, List<Cell>> missionToGeneratedSpace = new Dictionary<MissionNode, List<Cell>>();
-        private Dictionary<MissionNode, List<(int, Cell)>> missionToRankedGeneratedSpace = new Dictionary<MissionNode, List<(int, Cell)>>();
-        private EditorCoroutine editorCoroutine;
-        private List<SpaceState> replayStates;
-
         public List<SpaceRuleSetting> ruleSettings;
         public List<RoomTilePairing> roomTilePairings;
         public List<MissionPriorityPairing> roomPriorityPairings;
+
         /// <summary>
-        /// This is a quick fix.
+        ///     This is a quick fix.
         /// </summary>
         public LevelGenerator levelGen;
+
         public GameObject container;
         public GameObject spaceRulePrefab;
         public GameObject connectionSprite;
@@ -61,49 +35,74 @@ namespace ShapeGrammar
         public Tile wallLeft;
         public Tile wallDown;
 
+        public float secondsBetweenReplayStates;
+        private EditorCoroutine editorCoroutine;
+        private List<Cell> generatedSpaces = new();
+
+        private Cell[,] grid = new Cell[Constants.GRAPH_GRID_WIDTH, Constants.GRAPH_GRID_HEIGHT];
+
+        private MissionGenerator mg;
+        private Dictionary<MissionNode, List<Cell>> missionToGeneratedSpace = new();
+        private Dictionary<MissionNode, List<(int, Cell)>> missionToRankedGeneratedSpace = new();
+        private List<SpaceState> replayStates;
+
+        private void Reset()
+        {
+            this.StopReplay();
+            this.grid = new Cell[Constants.GRAPH_GRID_WIDTH, Constants.GRAPH_GRID_HEIGHT];
+            this.generatedSpaces = new List<Cell>();
+            this.missionToGeneratedSpace = new Dictionary<MissionNode, List<Cell>>();
+            this.missionToRankedGeneratedSpace = new Dictionary<MissionNode, List<(int, Cell)>>();
+        }
+
+        private void OnValidate()
+        {
+            this.LoadRules();
+        }
+
         [Button]
         public SpaceState GenerateShape(bool visualize = true)
         {
-            Reset();
-            mg = FindObjectOfType(typeof(MissionGenerator)) as MissionGenerator;
-            LoadRules();
+            this.Reset();
+            this.mg = FindObjectOfType(typeof(MissionGenerator)) as MissionGenerator;
+            this.LoadRules();
             EditorApplication.ExecuteMenuItem("File/Save Project");
 
-            MissionGraph graph = mg.GenerateMission(visualize);
+            MissionGraph graph = this.mg.GenerateMission(visualize);
 
-            GenerateShape(graph, visualize);
+            this.GenerateShape(graph, visualize);
 
-            SpaceState finalState = replayStates.Last();
+            SpaceState finalState = this.replayStates.Last();
 
             if (visualize)
             {
-                VisualizeGrammar(finalState);
+                this.VisualizeGrammar(finalState);
             }
 
             return finalState;
         }
 
-        public float secondsBetweenReplayStates;
-
         [Button]
         public void Replay()
         {
-            StopReplay();
-            if (replayStates == null)
+            this.StopReplay();
+            if (this.replayStates == null)
             {
-                Debug.LogWarning($"You must generate space first to save a replay of it");
+                Debug.LogWarning("You must generate space first to save a replay of it");
             }
+
             {
-                editorCoroutine = EditorCoroutineUtility.StartCoroutine(ReplayGeneration(replayStates), this);
+                this.editorCoroutine =
+                    EditorCoroutineUtility.StartCoroutine(this.ReplayGeneration(this.replayStates), this);
             }
         }
 
         [Button]
         public void StopReplay()
         {
-            if (editorCoroutine != null)
+            if (this.editorCoroutine != null)
             {
-                EditorCoroutineUtility.StopCoroutine(editorCoroutine);
+                EditorCoroutineUtility.StopCoroutine(this.editorCoroutine);
             }
         }
 
@@ -111,24 +110,25 @@ namespace ShapeGrammar
         {
             foreach (SpaceState state in states)
             {
-                VisualizeGrammar(state);
-                yield return new EditorWaitForSeconds(secondsBetweenReplayStates);
+                this.VisualizeGrammar(state);
+                yield return new EditorWaitForSeconds(this.secondsBetweenReplayStates);
             }
+
             yield return null;
         }
 
         private void GenerateShape(MissionGraph graph, bool visualize = true)
         {
-            List<ShapeRule> rules = ruleSettings
+            List<ShapeRule> rules = this.ruleSettings
                 .Where(setting => setting.activated)
                 .Select(setting => setting.rule.GetPlainClass())
                 .ToList();
 
-            List<ShapeRule> rulesApplied = new List<ShapeRule>();
+            List<ShapeRule> rulesApplied = new();
 
-            List<SpaceState> states = new List<SpaceState>();
+            List<SpaceState> states = new();
 
-            MissionExecutionHelper helper = MissionExecutionHelper.GetSequence(graph, roomPriorityPairings);
+            MissionExecutionHelper helper = MissionExecutionHelper.GetSequence(graph, this.roomPriorityPairings);
 
             int i = 0;
             while (helper.sequence.Count != 0 && i < 1000)
@@ -137,9 +137,9 @@ namespace ShapeGrammar
 
                 helper.nodeToTightCouplingDict.TryGetValue(current, out MissionNode tightSuperordinate);
 
-                ShapeRule ruleApplied = ApplyRandomSpaceRule(current, rules, tightSuperordinate);
+                ShapeRule ruleApplied = this.ApplyRandomSpaceRule(current, rules, tightSuperordinate);
 
-                states.Add(CopyState());
+                states.Add(this.CopyState());
 
                 if (ruleApplied == null)
                 {
@@ -151,87 +151,92 @@ namespace ShapeGrammar
                     {
                         for (int _ = 0; _ < Constants.MISSION_NOTHING_REPEAT_NR; _++)
                         {
-                            ApplySpaceRule(current, ruleApplied, tightSuperordinate);
-                            states.Add(CopyState());
+                            this.ApplySpaceRule(current, ruleApplied, tightSuperordinate);
+                            states.Add(this.CopyState());
                         }
                     }
+
                     rulesApplied.Add(ruleApplied);
                 }
+
                 i++;
             }
-            replayStates = states;
+
+            this.replayStates = states;
 
             if (visualize)
             {
-                VisualizeRulesApplied(rulesApplied);
+                this.VisualizeRulesApplied(rulesApplied);
             }
         }
 
         private SpaceState CopyState()
         {
-            return new SpaceState { space = generatedSpaces.Select(space => space.DeepCopy()).ToList() };
+            return new SpaceState {space = this.generatedSpaces.Select(space => space.DeepCopy()).ToList()};
         }
 
         private void VisualizeGrammar(SpaceState state)
         {
-            Transform connectionsTransform = container.transform.Find("Connections");
+            Transform connectionsTransform = this.container.transform.Find("Connections");
             if (connectionsTransform == null)
             {
                 connectionsTransform = new GameObject().transform;
                 connectionsTransform.name = "Connections";
-                connectionsTransform.transform.SetParent(container.transform);
+                connectionsTransform.transform.SetParent(this.container.transform);
             }
+
             int i = 0;
             while (connectionsTransform.childCount > 0 && i < 1000)
             {
                 DestroyImmediate(connectionsTransform.transform.GetChild(0).gameObject);
                 i++;
             }
-            tiles.ClearAllTiles();
-            wallsRight.ClearAllTiles();
-            wallsUp.ClearAllTiles();
-            wallsLeft.ClearAllTiles();
-            wallsDown.ClearAllTiles();
+
+            this.tiles.ClearAllTiles();
+            this.wallsRight.ClearAllTiles();
+            this.wallsUp.ClearAllTiles();
+            this.wallsLeft.ClearAllTiles();
+            this.wallsDown.ClearAllTiles();
             foreach (Cell cell in state.space)
             {
-                RoomTilePairing finalPairing = roomTilePairings.Where(pairing => pairing.roomType == cell.roomType).First();
-                Vector3Int cellPosition = new Vector3Int(cell.x - Constants.GRAPH_GRID_WIDTH / 2, cell.y - Constants.GRAPH_GRID_HEIGHT / 2, 0);
-                tiles.SetTile(cellPosition, finalPairing.tile);
-                wallsRight.SetTile(cellPosition, wallRight);
-                wallsUp.SetTile(cellPosition, wallUp);
-                wallsLeft.SetTile(cellPosition, wallLeft);
-                wallsDown.SetTile(cellPosition, wallDown);
+                RoomTilePairing finalPairing =
+                    this.roomTilePairings.Where(pairing => pairing.roomType == cell.roomType).First();
+                Vector3Int cellPosition = new(cell.x - (Constants.GRAPH_GRID_WIDTH / 2),
+                    cell.y - (Constants.GRAPH_GRID_HEIGHT / 2), 0);
+                this.tiles.SetTile(cellPosition, finalPairing.tile);
+                this.wallsRight.SetTile(cellPosition, this.wallRight);
+                this.wallsUp.SetTile(cellPosition, this.wallUp);
+                this.wallsLeft.SetTile(cellPosition, this.wallLeft);
+                this.wallsDown.SetTile(cellPosition, this.wallDown);
 
                 foreach (Direction direction in cell.connections)
                 {
                     switch (direction)
                     {
                         case Direction.RIGHT:
-                            wallsRight.SetTile(cellPosition, null);
+                            this.wallsRight.SetTile(cellPosition, null);
                             break;
 
                         case Direction.UP:
-                            wallsUp.SetTile(cellPosition, null);
+                            this.wallsUp.SetTile(cellPosition, null);
                             break;
 
                         case Direction.LEFT:
-                            wallsLeft.SetTile(cellPosition, null);
+                            this.wallsLeft.SetTile(cellPosition, null);
                             break;
 
                         case Direction.DOWN:
-                            wallsDown.SetTile(cellPosition, null);
-                            break;
-
-                        default:
+                            this.wallsDown.SetTile(cellPosition, null);
                             break;
                     }
                 }
 
                 foreach (Direction direction in cell.possibleConnections)
                 {
-                    GameObject clone = Instantiate(connectionSprite, connectionsTransform);
+                    GameObject clone = Instantiate(this.connectionSprite, connectionsTransform);
                     clone.name = $"Connection-{direction}";
-                    clone.transform.position = new Vector3(cell.x - Constants.GRAPH_GRID_WIDTH / 2, cell.y - Constants.GRAPH_GRID_HEIGHT / 2);
+                    clone.transform.position = new Vector3(cell.x - (Constants.GRAPH_GRID_WIDTH / 2),
+                        cell.y - (Constants.GRAPH_GRID_HEIGHT / 2));
                     switch (direction)
                     {
                         case Direction.RIGHT:
@@ -249,9 +254,6 @@ namespace ShapeGrammar
                         case Direction.UP:
                             clone.transform.position += new Vector3(0, 0.5f);
                             break;
-
-                        default:
-                            break;
                     }
                 }
             }
@@ -259,12 +261,13 @@ namespace ShapeGrammar
 
         private void VisualizeRulesApplied(List<ShapeRule> rulesApplied)
         {
-            Transform rulesAppliedTransform = container.transform.Find("RulesApplied");
+            Transform rulesAppliedTransform = this.container.transform.Find("RulesApplied");
             if (rulesAppliedTransform == null)
             {
-                rulesAppliedTransform = Instantiate(spaceRulePrefab, container.transform).transform;
+                rulesAppliedTransform = Instantiate(this.spaceRulePrefab, this.container.transform).transform;
                 rulesAppliedTransform.name = "RulesApplied";
             }
+
             int i = 0;
             while (rulesAppliedTransform.childCount > 0 && i < 1000)
             {
@@ -274,14 +277,15 @@ namespace ShapeGrammar
 
             foreach (ShapeRule rule in rulesApplied)
             {
-                GameObject clone = Instantiate(spaceRulePrefab, rulesAppliedTransform);
+                GameObject clone = Instantiate(this.spaceRulePrefab, rulesAppliedTransform);
                 clone.name = rule.ToString();
             }
 
-            container.ExpandRecursive(true);
+            this.container.ExpandRecursive(true);
         }
 
-        private ShapeRule ApplyRandomSpaceRule(MissionNode node, List<ShapeRule> rules, MissionNode tightSuperordinate = null)
+        private ShapeRule ApplyRandomSpaceRule(MissionNode node, List<ShapeRule> rules,
+            MissionNode tightSuperordinate = null)
         {
             List<ShapeRule> filteredRules = rules
                 .Where(r => r.missionName == node.missionName)
@@ -294,21 +298,22 @@ namespace ShapeGrammar
 
             ShapeRule rule = filteredRules.PickRandom();
 
-            return ApplySpaceRule(node, rule, tightSuperordinate);
+            return this.ApplySpaceRule(node, rule, tightSuperordinate);
         }
 
         private ShapeRule ApplySpaceRule(MissionNode node, ShapeRule rule, MissionNode tightSuperordinate)
         {
             List<Connection> connections;
-            List<Connection> allConnections = GetAllConnections();
-            List<Connection> tightConnections = new List<Connection>();
+            List<Connection> allConnections = this.GetAllConnections();
+            List<Connection> tightConnections = new();
             List<Cell> tightSuperordinateSpaceCells = null;
             if (tightSuperordinate != null)
             {
-                List<(int, Cell)> prioritizedCells = missionToRankedGeneratedSpace[tightSuperordinate];
+                List<(int, Cell)> prioritizedCells = this.missionToRankedGeneratedSpace[tightSuperordinate];
                 prioritizedCells.Sort((e1, e2) => e1.Item1.CompareTo(e2.Item1));
-                tightSuperordinateSpaceCells = missionToRankedGeneratedSpace[tightSuperordinate].Select(space => space.Item2).ToList();
-                tightConnections = GetConnections(tightSuperordinateSpaceCells);
+                tightSuperordinateSpaceCells = this.missionToRankedGeneratedSpace[tightSuperordinate]
+                    .Select(space => space.Item2).ToList();
+                tightConnections = this.GetConnections(tightSuperordinateSpaceCells);
             }
 
             connections = tightSuperordinate == null ? allConnections : tightConnections;
@@ -321,69 +326,80 @@ namespace ShapeGrammar
             {
                 connection = connections.PickRandom();
                 connections.Remove(connection);
-                if (GenerateSpace(connection, rule, node, tightSuperordinate))
+                if (this.GenerateSpace(connection, rule, node, tightSuperordinate))
                 {
                     return rule;
                 }
             }
 
             // Generate space in more randomized connections
-            while ((connection = SpawnRandomConnection(tightSuperordinateSpaceCells)) != null)
+            while ((connection = this.SpawnRandomConnection(tightSuperordinateSpaceCells)) != null)
             {
                 if (connection == null)
                 {
-                    throw new Exception($"Completely out of new places to spawn connection This should be impossible.");
+                    throw new Exception("Completely out of new places to spawn connection This should be impossible.");
                 }
-                GenerateSpace(connection, rule, node, tightSuperordinate);
+
+                this.GenerateSpace(connection, rule, node, tightSuperordinate);
                 return rule;
             }
-            string tightString = tightSuperordinate != null ? $" The tight superordinate was a {tightSuperordinate.missionName}." : "";
+
+            string tightString = tightSuperordinate != null
+                ? $" The tight superordinate was a {tightSuperordinate.missionName}."
+                : "";
             Debug.LogWarning($"Failed to substitute {(tightSuperordinate != null ? "=>" : "->")} " +
-                $"mission {node.missionName} with {rule.roomTemplatePositions.Count} " +
-                $"number of space rule tiles. {tightString}");
+                             $"mission {node.missionName} with {rule.roomTemplatePositions.Count} " +
+                             $"number of space rule tiles. {tightString}");
             return null;
         }
 
-        private bool GenerateSpace(Connection connection, ShapeRule rule, MissionNode node, MissionNode tightSuperordinate)
+        private bool GenerateSpace(Connection connection, ShapeRule rule, MissionNode node,
+            MissionNode tightSuperordinate)
         {
-            Cell connectionLocationCell = grid[connection.location.x, connection.location.y];
+            Cell connectionLocationCell = this.grid[connection.location.x, connection.location.y];
             if (connectionLocationCell != null && connectionLocationCell.roomType == RoomType.Goal)
             {
                 return false;
             }
+
             Vector2Int target = connection.GetConnectionTarget();
-            Cell rightCell = grid[target.x + 1, target.y];
-            Cell upCell = grid[target.x, target.y + 1];
-            Cell leftCell = grid[target.x - 1, target.y];
-            Cell downCell = grid[target.x, target.y - 1];
-            if ((node.missionName == MissionName.Lock || node.missionName == MissionName.LockMulti) 
-                && rightCell != null 
-                && upCell != null 
-                && leftCell != null 
+            Cell rightCell = this.grid[target.x + 1, target.y];
+            Cell upCell = this.grid[target.x, target.y + 1];
+            Cell leftCell = this.grid[target.x - 1, target.y];
+            Cell downCell = this.grid[target.x, target.y - 1];
+            if ((node.missionName == MissionName.Lock || node.missionName == MissionName.LockMulti)
+                && rightCell != null
+                && upCell != null
+                && leftCell != null
                 && downCell != null)
             {
                 return false;
             }
-            List<SpaceRuleTile> tiles = GetTransformedSpaceRuleTiles(connection.location, connection.direction, rule);
+
+            List<SpaceRuleTile> tiles =
+                this.GetTransformedSpaceRuleTiles(connection.location, connection.direction, rule);
             if (tiles != null)
             {
-                GenerateCells(tiles, node.specialFunctionalities);
-                BindCells(connection);
-                missionToGeneratedSpace[node] = tiles
-                    .Select(tile => grid[tile.position.x, tile.position.y]).ToList();
-                missionToRankedGeneratedSpace[node] = tiles
-                    .Select(tile => (0, grid[tile.position.x, tile.position.y])).ToList();
+                this.GenerateCells(tiles, node.specialFunctionalities);
+                this.BindCells(connection);
+                this.missionToGeneratedSpace[node] = tiles
+                    .Select(tile => this.grid[tile.position.x, tile.position.y]).ToList();
+                this.missionToRankedGeneratedSpace[node] = tiles
+                    .Select(tile => (0, this.grid[tile.position.x, tile.position.y])).ToList();
                 if (tightSuperordinate != null)
                 {
-                    missionToGeneratedSpace[tightSuperordinate]
-                        .AddRange(tiles.Select(tile => grid[tile.position.x, tile.position.y]));
-                    missionToRankedGeneratedSpace[tightSuperordinate]
-                        .AddRange(tiles.Select(tile => (missionToRankedGeneratedSpace.Count, grid[tile.position.x, tile.position.y])));
+                    this.missionToGeneratedSpace[tightSuperordinate]
+                        .AddRange(tiles.Select(tile => this.grid[tile.position.x, tile.position.y]));
+                    this.missionToRankedGeneratedSpace[tightSuperordinate]
+                        .AddRange(tiles.Select(tile => (this.missionToRankedGeneratedSpace.Count,
+                            this.grid[tile.position.x, tile.position.y])));
                 }
-                RemoveConnectionsIntoGeneratedSpace(tiles.Select(tile => tile.position).ToList());
-                RemoveInvalidConnectionsOutOfGeneratedSpace(tiles.Select(tile => tile.position).ToList());
+
+                this.RemoveConnectionsIntoGeneratedSpace(tiles.Select(tile => tile.position).ToList());
+                this.RemoveInvalidConnectionsOutOfGeneratedSpace(tiles.Select(tile => tile.position).ToList());
                 return true;
             }
+
             return false;
         }
 
@@ -393,25 +409,24 @@ namespace ShapeGrammar
             {
                 Vector2Int location = tile.position;
 
-                Cell cell = new Cell
+                Cell cell = new()
                 {
-                    parentGrid = grid,
+                    parentGrid = this.grid,
                     roomType = tile.roomType,
                     x = location.x,
                     y = location.y,
                     specialFunctionalities = specialFunctionalities,
-                    possibleConnections = new List<Direction>(tile.possibleDirections),
-
+                    possibleConnections = new List<Direction>(tile.possibleDirections)
                 };
-                grid[location.x, location.y] = cell;
-                generatedSpaces.Add(cell);
+                this.grid[location.x, location.y] = cell;
+                this.generatedSpaces.Add(cell);
             }
         }
 
         private void BindCells(Connection connection)
         {
-            Cell parent = grid[connection.location.x, connection.location.y];
-            Cell child = grid[connection.GetConnectionTarget().x, connection.GetConnectionTarget().y];
+            Cell parent = this.grid[connection.location.x, connection.location.y];
+            Cell child = this.grid[connection.GetConnectionTarget().x, connection.GetConnectionTarget().y];
 
             if (parent == null)
             {
@@ -422,7 +437,7 @@ namespace ShapeGrammar
             {
                 if (parent.connections.Count > 0)
                 {
-                    throw new Exception($"Something went awfully wrong");
+                    throw new Exception("Something went awfully wrong");
                 }
             }
 
@@ -432,14 +447,14 @@ namespace ShapeGrammar
 
         private Connection SpawnRandomConnection(List<Cell> list)
         {
-            Connection connection = SpawnRandomConnectionInSpace(list);
+            Connection connection = this.SpawnRandomConnectionInSpace(list);
 
             if (connection == null)
             {
                 // Failed to produce connection in tight superordinate space,
                 // proceed to produce connection randomly across all generated space.
 
-                connection = SpawnRandomConnectionInSpace(generatedSpaces);
+                connection = this.SpawnRandomConnectionInSpace(this.generatedSpaces);
             }
 
             return connection;
@@ -449,9 +464,9 @@ namespace ShapeGrammar
         {
             foreach (Vector2Int location in locations)
             {
-                Cell cell = grid[location.x, location.y];
+                Cell cell = this.grid[location.x, location.y];
 
-                RemoveInvalidConnectionsOutOfGeneratedCell(cell);
+                this.RemoveInvalidConnectionsOutOfGeneratedCell(cell);
             }
         }
 
@@ -464,38 +479,39 @@ namespace ShapeGrammar
                 switch (possibleDirection)
                 {
                     case Direction.RIGHT:
-                        if (grid[cell.x + 1, cell.y] != null)
+                        if (this.grid[cell.x + 1, cell.y] != null)
                         {
                             cell.possibleConnections.RemoveAt(i);
                             i--;
                         }
+
                         break;
 
                     case Direction.UP:
-                        if (grid[cell.x, cell.y + 1] != null)
+                        if (this.grid[cell.x, cell.y + 1] != null)
                         {
                             cell.possibleConnections.RemoveAt(i);
                             i--;
                         }
+
                         break;
 
                     case Direction.LEFT:
-                        if (grid[cell.x - 1, cell.y] != null)
+                        if (this.grid[cell.x - 1, cell.y] != null)
                         {
                             cell.possibleConnections.RemoveAt(i);
                             i--;
                         }
+
                         break;
 
                     case Direction.DOWN:
-                        if (grid[cell.x, cell.y - 1] != null)
+                        if (this.grid[cell.x, cell.y - 1] != null)
                         {
                             cell.possibleConnections.RemoveAt(i);
                             i--;
                         }
-                        break;
 
-                    default:
                         break;
                 }
             }
@@ -505,30 +521,33 @@ namespace ShapeGrammar
         {
             foreach (Vector2Int location in locations)
             {
-                Cell cell = grid[location.x, location.y];
+                Cell cell = this.grid[location.x, location.y];
 
-                RemoveConnectionsIntoGeneratedCell(cell);
+                this.RemoveConnectionsIntoGeneratedCell(cell);
             }
         }
 
         private void RemoveConnectionsIntoGeneratedCell(Cell cell)
         {
-            Cell current = grid[cell.x - 1, cell.y];
+            Cell current = this.grid[cell.x - 1, cell.y];
             if (current != null)
             {
                 current.possibleConnections.Remove(Direction.RIGHT);
             }
-            current = grid[cell.x, cell.y - 1];
+
+            current = this.grid[cell.x, cell.y - 1];
             if (current != null)
             {
                 current.possibleConnections.Remove(Direction.UP);
             }
-            current = grid[cell.x + 1, cell.y];
+
+            current = this.grid[cell.x + 1, cell.y];
             if (current != null)
             {
                 current.possibleConnections.Remove(Direction.LEFT);
             }
-            current = grid[cell.x, cell.y + 1];
+
+            current = this.grid[cell.x, cell.y + 1];
             if (current != null)
             {
                 current.possibleConnections.Remove(Direction.DOWN);
@@ -536,18 +555,19 @@ namespace ShapeGrammar
         }
 
         /// <summary>
-        /// Returns null if the transformed space rule tiles are already occupied.
+        ///     Returns null if the transformed space rule tiles are already occupied.
         /// </summary>
         /// <param name="location"></param>
         /// <param name="direction"></param>
         /// <param name="rule"></param>
         /// <returns></returns>
-        private List<SpaceRuleTile> GetTransformedSpaceRuleTiles(Vector2Int location, Direction direction, ShapeRule rule)
+        private List<SpaceRuleTile> GetTransformedSpaceRuleTiles(Vector2Int location, Direction direction,
+            ShapeRule rule)
         {
             int x = location.x;
             int y = location.y;
 
-            List<SpaceRuleTile> newSpaceRuleTiles = new List<SpaceRuleTile>();
+            List<SpaceRuleTile> newSpaceRuleTiles = new();
 
             foreach (SpaceRuleTile tile in rule.roomTemplatePositions)
             {
@@ -563,7 +583,7 @@ namespace ShapeGrammar
                 }
                 else if (direction == Direction.UP)
                 {
-                    newX += (-1) * tile.position.y;
+                    newX += -1 * tile.position.y;
                     newY += tile.position.x;
 
                     // Move to the root tile of the connection
@@ -571,8 +591,8 @@ namespace ShapeGrammar
                 }
                 else if (direction == Direction.LEFT)
                 {
-                    newX += (-1) * tile.position.x;
-                    newY += (-1) * tile.position.y;
+                    newX += -1 * tile.position.x;
+                    newY += -1 * tile.position.y;
 
                     // Move to the root tile of the connection
                     newX -= 1;
@@ -580,23 +600,21 @@ namespace ShapeGrammar
                 else if (direction == Direction.DOWN)
                 {
                     newX += tile.position.y;
-                    newY += (-1) * tile.position.x;
+                    newY += -1 * tile.position.x;
 
                     // Move to the root tile of the connection
                     newY -= 1;
                 }
 
-                Vector2Int newPosition = new Vector2Int(newX, newY);
+                Vector2Int newPosition = new(newX, newY);
 
                 List<Direction> newDirections = tile.possibleDirections
                     .Select(possibleDirection => possibleDirection.TransformDirection(direction))
                     .ToList();
 
-                SpaceRuleTile newTile = new SpaceRuleTile
+                SpaceRuleTile newTile = new()
                 {
-                    position = newPosition,
-                    roomType = tile.roomType,
-                    possibleDirections = newDirections
+                    position = newPosition, roomType = tile.roomType, possibleDirections = newDirections
                 };
 
                 newSpaceRuleTiles.Add(newTile);
@@ -604,11 +622,12 @@ namespace ShapeGrammar
 
             foreach (SpaceRuleTile tile in newSpaceRuleTiles)
             {
-                if (generatedSpaces.Contains(grid[tile.position.x, tile.position.y]))
+                if (this.generatedSpaces.Contains(this.grid[tile.position.x, tile.position.y]))
                 {
                     return null;
                 }
             }
+
             return newSpaceRuleTiles;
         }
 
@@ -623,12 +642,13 @@ namespace ShapeGrammar
             foreach (Cell cell in tightSuperordinateSpace)
             {
                 cell.randomSpawnCount++;
-                Connection randomNewConnection = SpawnRandomConnectionAtCell(cell);
+                Connection randomNewConnection = this.SpawnRandomConnectionAtCell(cell);
                 if (randomNewConnection != null)
                 {
                     return randomNewConnection;
                 }
             }
+
             return null;
         }
 
@@ -638,7 +658,8 @@ namespace ShapeGrammar
             {
                 return null;
             }
-            List<Direction> directions = GetDirections();
+
+            List<Direction> directions = this.GetDirections();
             directions = directions.Shuffle();
             foreach (Direction direction in directions)
             {
@@ -646,31 +667,30 @@ namespace ShapeGrammar
                 switch (direction)
                 {
                     case Direction.RIGHT:
-                        adjacentCell = grid[cell.x + 1, cell.y];
+                        adjacentCell = this.grid[cell.x + 1, cell.y];
                         break;
 
                     case Direction.DOWN:
-                        adjacentCell = grid[cell.x, cell.y - 1];
+                        adjacentCell = this.grid[cell.x, cell.y - 1];
                         break;
 
                     case Direction.LEFT:
-                        adjacentCell = grid[cell.x - 1, cell.y];
+                        adjacentCell = this.grid[cell.x - 1, cell.y];
                         break;
 
                     case Direction.UP:
-                        adjacentCell = grid[cell.x, cell.y + 1];
-                        break;
-
-                    default:
+                        adjacentCell = this.grid[cell.x, cell.y + 1];
                         break;
                 }
+
                 if (adjacentCell == null)
                 {
-                    List<Direction> connectionsToCheck = new List<Direction>(cell.connections);
+                    List<Direction> connectionsToCheck = new(cell.connections);
                     connectionsToCheck.Add(direction);
-                    if (levelGen.roomTypeToDictionaryDict.ContainsKey(cell.roomType))
+                    if (this.levelGen.roomTypeToDictionaryDict.ContainsKey(cell.roomType))
                     {
-                        if (!levelGen.roomTypeToDictionaryDict[cell.roomType].ContainsKey(connectionsToCheck.GetRoomShape()))
+                        if (!this.levelGen.roomTypeToDictionaryDict[cell.roomType]
+                                .ContainsKey(connectionsToCheck.GetRoomShape()))
                         {
                             continue;
                         }
@@ -679,61 +699,48 @@ namespace ShapeGrammar
                     {
                         continue;
                     }
+
                     cell.possibleConnections.Add(direction);
                     return new Connection(direction, new Vector2Int(cell.x, cell.y));
                 }
             }
+
             return null;
         }
 
         private List<Direction> GetDirections()
         {
-            return new List<Direction> { Direction.RIGHT, Direction.UP, Direction.LEFT, Direction.DOWN };
+            return new List<Direction> {Direction.RIGHT, Direction.UP, Direction.LEFT, Direction.DOWN};
         }
 
         private List<Connection> GetAllConnections()
         {
-            if (generatedSpaces.Count == 0)
+            if (this.generatedSpaces.Count == 0)
             {
                 return new List<Connection>
-            {
-                new Connection(Direction.RIGHT, new Vector2Int(Constants.GRAPH_GRID_WIDTH / 2, Constants.GRAPH_GRID_HEIGHT / 2))
-            };
+                {
+                    new(Direction.RIGHT,
+                        new Vector2Int(Constants.GRAPH_GRID_WIDTH / 2, Constants.GRAPH_GRID_HEIGHT / 2))
+                };
             }
-            else
-            {
-                var where = generatedSpaces.Where(cell => cell.possibleConnections.Count != 0).ToList();
-                var selectMany = where.SelectMany(cell => cell.GetConnections()).ToList();
-                return selectMany;
-            }
-        }
 
-        private void OnValidate()
-        {
-            LoadRules();
-        }
-
-        private void Reset()
-        {
-            StopReplay();
-            grid = new Cell[Constants.GRAPH_GRID_WIDTH, Constants.GRAPH_GRID_HEIGHT];
-            generatedSpaces = new List<Cell>();
-            missionToGeneratedSpace = new Dictionary<MissionNode, List<Cell>>();
-            missionToRankedGeneratedSpace = new Dictionary<MissionNode, List<(int, Cell)>>();
+            List<Cell> where = this.generatedSpaces.Where(cell => cell.possibleConnections.Count != 0).ToList();
+            List<Connection> selectMany = where.SelectMany(cell => cell.GetConnections()).ToList();
+            return selectMany;
         }
 
         private void LoadRules()
         {
             string resourcePath = Constants.SPACE_RULES_PATH.ToResourcePath();
             SpaceRuleScriptableObject[] temp = Resources.LoadAll<SpaceRuleScriptableObject>(resourcePath);
-            ruleSettings = ruleSettings.Where(setting => setting.rule != null).ToList();
+            this.ruleSettings = this.ruleSettings.Where(setting => setting.rule != null).ToList();
             foreach (SpaceRuleScriptableObject rule in temp)
             {
-                if (!ruleSettings.Select(setting => setting.rule).Contains(rule))
+                if (!this.ruleSettings.Select(setting => setting.rule).Contains(rule))
                 {
-                    ruleSettings = temp.Select(tempRule =>
+                    this.ruleSettings = temp.Select(tempRule =>
                     {
-                        SpaceRuleSetting tempSetting = ruleSettings.Find(setting => setting.rule == tempRule);
+                        SpaceRuleSetting tempSetting = this.ruleSettings.Find(setting => setting.rule == tempRule);
                         bool activated = tempSetting != null ? tempSetting.activated : true;
                         return new SpaceRuleSetting(tempRule, activated);
                     }).ToList();
@@ -742,22 +749,46 @@ namespace ShapeGrammar
             }
         }
 
+        [Serializable]
+        public class RoomTilePairing
+        {
+            public RoomType roomType;
+            public Tile tile;
+        }
+
+        [Serializable]
+        public class MissionPriorityPairing
+        {
+            public MissionName missionName;
+
+            /// <summary>
+            ///     The higher the priority, the faster the room type is
+            ///     chosen to be generated out of all other subordinates of a node.
+            /// </summary>
+            public int priority;
+        }
+
         private class MissionExecutionHelper
         {
-            public Queue<MissionNode> sequence;
             public Dictionary<MissionNode, MissionNode> nodeToTightCouplingDict;
+            public Queue<MissionNode> sequence;
 
-            public static MissionExecutionHelper GetSequence(MissionGraph graph, List<MissionPriorityPairing> priorities)
+            public static MissionExecutionHelper GetSequence(MissionGraph graph,
+                List<MissionPriorityPairing> priorities)
             {
-                Queue<MissionNode> sequence = new Queue<MissionNode>();
-                Dictionary<MissionNode, MissionNode> nodeToTightCouplingDict = new Dictionary<MissionNode, MissionNode>();
+                Queue<MissionNode> sequence = new();
+                Dictionary<MissionNode, MissionNode> nodeToTightCouplingDict = new();
 
                 GetSequenceRecursive(graph.root, sequence, nodeToTightCouplingDict, priorities);
 
-                return new MissionExecutionHelper { sequence = sequence, nodeToTightCouplingDict = nodeToTightCouplingDict };
+                return new MissionExecutionHelper
+                {
+                    sequence = sequence, nodeToTightCouplingDict = nodeToTightCouplingDict
+                };
             }
 
-            private static void GetSequenceRecursive(MissionNode current, Queue<MissionNode> sequence, Dictionary<MissionNode, MissionNode> nodeToTightCouplingDict, List<MissionPriorityPairing> priorities)
+            private static void GetSequenceRecursive(MissionNode current, Queue<MissionNode> sequence,
+                Dictionary<MissionNode, MissionNode> nodeToTightCouplingDict, List<MissionPriorityPairing> priorities)
             {
                 sequence.Enqueue(current);
 
@@ -771,15 +802,18 @@ namespace ShapeGrammar
                 foreach (MissionNode tightSubordinate in tightSubordinates)
                 {
                     nodeToTightCouplingDict[tightSubordinate] = current;
-                    bool allSuperordinatesHaveBeenVisited = CheckIfAllSuperordinatesHaveBeenVisited(tightSubordinate, sequence.ToList());
+                    bool allSuperordinatesHaveBeenVisited =
+                        CheckIfAllSuperordinatesHaveBeenVisited(tightSubordinate, sequence.ToList());
                     if (allSuperordinatesHaveBeenVisited)
                     {
                         GetSequenceRecursive(tightSubordinate, sequence, nodeToTightCouplingDict, priorities);
                     }
                 }
+
                 foreach (MissionNode subordinate in subordinates)
                 {
-                    bool allSuperordinatesHaveBeenVisited = CheckIfAllSuperordinatesHaveBeenVisited(subordinate, sequence.ToList());
+                    bool allSuperordinatesHaveBeenVisited =
+                        CheckIfAllSuperordinatesHaveBeenVisited(subordinate, sequence.ToList());
                     if (allSuperordinatesHaveBeenVisited)
                     {
                         GetSequenceRecursive(subordinate, sequence, nodeToTightCouplingDict, priorities);
@@ -797,24 +831,28 @@ namespace ShapeGrammar
                         allSuperordinatesHaveBeenVisited = false;
                     }
                 }
+
                 if (node.superordinateTightCoupling != null && !visited.Contains(node.superordinateTightCoupling))
                 {
                     allSuperordinatesHaveBeenVisited = false;
                 }
+
                 return allSuperordinatesHaveBeenVisited;
             }
 
             private static void SortByPriorities(List<MissionNode> nodes, List<MissionPriorityPairing> pairings)
             {
-                Dictionary<MissionName, int> prioritiesDict = new Dictionary<MissionName, int>();
+                Dictionary<MissionName, int> prioritiesDict = new();
                 foreach (MissionName name in Enum.GetValues(typeof(MissionName)))
                 {
                     prioritiesDict[name] = 0;
                 }
+
                 foreach (MissionPriorityPairing pairing in pairings)
                 {
                     prioritiesDict[pairing.missionName] = pairing.priority;
                 }
+
                 nodes.Sort((ic1, ic2) => prioritiesDict[ic2.missionName].CompareTo(prioritiesDict[ic1.missionName]));
             }
         }

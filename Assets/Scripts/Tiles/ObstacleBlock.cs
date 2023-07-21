@@ -1,27 +1,31 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Tilemaps;
-
-[CreateAssetMenu]
-public class ObstacleBlock : ScriptableObject
+﻿namespace Tiles
 {
-    public int width;
-    public int height;
+    using System.Collections.Generic;
+    using UnityEngine;
+    using UnityEngine.Tilemaps;
 
-    public List<Tile> tiles;
-
-    public Dictionary<Vector3Int, Tile> GetDictionary()
+    [CreateAssetMenu]
+    public class ObstacleBlock : ScriptableObject
     {
-        Dictionary<Vector3Int, Tile> dict = new Dictionary<Vector3Int, Tile>();
-        int index = 0;
-        for (int i = 0; i < width; i++)
+        public int width;
+        public int height;
+
+        public List<Tile> tiles;
+
+        public Dictionary<Vector3Int, Tile> GetDictionary()
         {
-            for (int j = 0; j < height; j++)
+            Dictionary<Vector3Int, Tile> dict = new();
+            int index = 0;
+            for (int i = 0; i < this.width; i++)
             {
-                dict[new Vector3Int(i, j, 0)] = tiles[index];
-                index++;
+                for (int j = 0; j < this.height; j++)
+                {
+                    dict[new Vector3Int(i, j, 0)] = this.tiles[index];
+                    index++;
+                }
             }
+
+            return dict;
         }
-        return dict;
     }
 }

@@ -1,20 +1,19 @@
-﻿using Priority_Queue;
-using ShapeGrammar;
-using Sirenix.OdinInspector;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using ThreadedPathfinding;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.Profiling;
-using UnityEngine.Tilemaps;
-
-namespace ExpressiveRange
+﻿namespace ExpressiveRange
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
+    using ShapeGrammar;
+    using Sirenix.OdinInspector;
+    using Tiles;
+    using UnityEditor;
+    using UnityEngine;
+    using UnityEngine.Profiling;
+    using UnityEngine.Tilemaps;
+
     public class ExpressiveRangeAnalyzer : MonoBehaviour
     {
         public MapManager mm;
@@ -22,20 +21,22 @@ namespace ExpressiveRange
         public string runName;
         public string displayName;
         public int number_of_samples;
-        private readonly List<Sample> samples = new List<Sample>();
+        private readonly List<Sample> samples = new();
+
         [Button]
         public void GenerateAnalysis(bool save = true)
         {
-            StartCoroutine(StartLevelGenerationCoroutine(number_of_samples, save));
+            this.StartCoroutine(this.StartLevelGenerationCoroutine(this.number_of_samples, save));
         }
+
         private IEnumerator StartLevelGenerationCoroutine(int number_of_samples, bool save)
         {
             SetTileDelayManager manager = SetTileDelayManager.Instance;
-            samples.Clear();
+            this.samples.Clear();
             for (int i = 0; i < number_of_samples; i++)
             {
                 Profiler.BeginSample("lg.GenerateLevel");
-                Level level = lg.GenerateLevel(number_of_samples == 1, false);
+                Level level = this.lg.GenerateLevel(number_of_samples == 1, false);
                 Profiler.EndSample();
 
                 yield return null;
@@ -48,56 +49,59 @@ namespace ExpressiveRange
                 yield return null;
 
                 Profiler.BeginSample("calculate leniency and linearity");
-                double leniency = CalculateLeniency(level);
-                double linearity = CalculateLinearityPerTile(level);
+                double leniency = this.CalculateLeniency(level);
+                double linearity = this.CalculateLinearityPerTile(level);
                 Profiler.EndSample();
 
-                samples.Add(new Sample { level = level, leniency = leniency, linearity = linearity });
+                this.samples.Add(new Sample {level = level, leniency = leniency, linearity = linearity});
 
                 Debug.Log($"{i}");
-            };
+            }
+
+            ;
 
             Profiler.BeginSample("SaveData(save);");
-            SaveData(save);
+            this.SaveData(save);
             Profiler.EndSample();
         }
 
         private void SaveData(bool save)
         {
-            string unityFolderPath = $"Assets/ExpressiveRangeAnalyses";
+            string unityFolderPath = "Assets/ExpressiveRangeAnalyses";
             string systemFolderPath = $"{Path.GetDirectoryName(Application.dataPath)}\\Assets\\ExpressiveRangeAnalyses";
 
             if (save)
             {
-                if (!AssetDatabase.IsValidFolder($"{unityFolderPath}/{runName}-{number_of_samples}"))
+                if (!AssetDatabase.IsValidFolder($"{unityFolderPath}/{this.runName}-{this.number_of_samples}"))
                 {
-                    AssetDatabase.CreateFolder(unityFolderPath, $"{runName}-{number_of_samples}");
+                    AssetDatabase.CreateFolder(unityFolderPath, $"{this.runName}-{this.number_of_samples}");
                 }
-                //else
-                //{
-                //    throw new Exception($"Will not override folder with new data. Must delete folder or choose a unique folder name.");
-                //}
             }
 
-            unityFolderPath += $"/{runName}-{number_of_samples}";
+            //else
+            //{
+            //    throw new Exception($"Will not override folder with new data. Must delete folder or choose a unique folder name.");
+            //}
+            unityFolderPath += $"/{this.runName}-{this.number_of_samples}";
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
 
-            sb.Append($"{displayName}\n");
+            sb.Append($"{this.displayName}\n");
 
             try
             {
                 AssetDatabase.StartAssetEditing();
-                for (int i = 0; i < samples.Count; i++)
+                for (int i = 0; i < this.samples.Count; i++)
                 {
-                    Sample sample = samples[i];
+                    Sample sample = this.samples[i];
                     sb.Append($"{i}\n");
                     if (save)
                     {
                         Profiler.BeginSample("SaveData(save);");
-                        SaveLevel(sample.level, unityFolderPath, i);
+                        this.SaveLevel(sample.level, unityFolderPath, i);
                         Profiler.EndSample();
                     }
+
                     sb.Append($"{sample.leniency}\n");
                     sb.Append($"{sample.linearity}\n");
                 }
@@ -111,7 +115,8 @@ namespace ExpressiveRange
 
             if (save)
             {
-                File.WriteAllText($"{systemFolderPath}\\{runName}-{number_of_samples}\\data.txt", sb.ToString());
+                File.WriteAllText($"{systemFolderPath}\\{this.runName}-{this.number_of_samples}\\data.txt",
+                    sb.ToString());
             }
 
             if (save)
@@ -122,105 +127,35 @@ namespace ExpressiveRange
             AssetDatabase.Refresh();
         }
 
-#if UNITY_EDITOR
-        private void SaveLevel(Level level, string unityFolderPath, int id)
-        {
-            List<SavedTile> savedTiles = new List<SavedTile>();
-
-            Dictionary<Tile, string> cachedTileToGuid = new Dictionary<Tile, string>();
-
-            foreach (KeyValuePair<Vector3Int, Tile> pair in level.tilePosToTile)
-            {
-                Vector3Int pos = pair.Key;
-                Tile tile = pair.Value;
-                if (tile == null)
-                {
-                    continue;
-                }
-                if (!cachedTileToGuid.ContainsKey(tile))
-                {
-                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(tile, out string guid, out long localId);
-                    cachedTileToGuid[tile] = guid;
-                }
-                savedTiles.Add(new SavedTile { guid = cachedTileToGuid[tile], position = pos });
-            }
-
-            SavedLevelScriptableObject savedLevel = ScriptableObject.CreateInstance<SavedLevelScriptableObject>();
-            savedLevel.savedTiles = savedTiles;
-            savedLevel.name = $"{id}";
-            AssetDatabase.CreateAsset(savedLevel, $"{unityFolderPath}/{id}.asset");
-        }
-        [Button]
-        public void SaveLevel()
-        {
-            List<SavedTile> savedTiles = new List<SavedTile>();
-
-            foreach (Vector3Int position in lg.tilemap.cellBounds.allPositionsWithin)
-            {
-                if (lg.tilemap.HasTile(position))
-                {
-                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(lg.tilemap.GetTile(position), out string guid, out long localId);
-                    savedTiles.Add(new SavedTile { guid = guid, position = position });
-                }
-            }
-
-            SavedLevelScriptableObject savedLevel = ScriptableObject.CreateInstance<SavedLevelScriptableObject>();
-            savedLevel.savedTiles = savedTiles;
-            savedLevel.name = $"SavedLevel with {savedTiles.Count} tiles";
-            AssetDatabase.CreateAsset(savedLevel, $"{Constants.SAVED_LEVELS_PATH}/{savedLevel.name}.asset");
-            AssetDatabase.SaveAssets();
-        }
-        public string fullRunName;
-        [Button]
-        public void LoadLevel(int id)
-        {
-            fullRunName = this.fullRunName;
-            if (id < 0)
-            {
-                return;
-            }
-
-            string unityFolderPath = $"Assets/ExpressiveRangeAnalyses/{fullRunName}/{id}.asset";
-
-            SavedLevelScriptableObject savedLevel = AssetDatabase.LoadAssetAtPath<SavedLevelScriptableObject>($"{unityFolderPath}");
-
-            lg.RecreateTilemap();
-
-            foreach (SavedTile savedTile in savedLevel.savedTiles)
-            {
-                Tile tile = AssetDatabase.LoadAssetAtPath<Tile>(AssetDatabase.GUIDToAssetPath(savedTile.guid));
-                lg.tilemap.SetTile(savedTile.position, tile);
-            }
-        }
-#endif
         private double CalculateLeniency(Level level)
         {
             int validTileCount = 0;
             double averageTileLeniency = 0.0f;
             foreach (Room room in level.rooms)
+            foreach (Vector3Int tile in room.finalTilePositions)
             {
-                foreach (Vector3Int tile in room.finalTilePositions)
+                ScriptableTile sTile = this.lg.tilemap.GetTile(tile) as ScriptableTile;
+                if (sTile != null)
                 {
-                    ScriptableTile sTile = lg.tilemap.GetTile(tile) as ScriptableTile;
-                    if (sTile != null)
+                    if (sTile.tileType == SimpleTileType.Wall)
                     {
-                        if (sTile.tileType == SimpleTileType.Wall)
-                        {
-                            continue;
-                        }
-                        validTileCount++;
-                        averageTileLeniency += GetLeniency(sTile.tileType);
+                        continue;
                     }
+
+                    validTileCount++;
+                    averageTileLeniency += this.GetLeniency(sTile.tileType);
                 }
             }
+
             return averageTileLeniency / validTileCount;
         }
+
         private double CalculateLinearityPerTile(Level level)
         {
             Vector3Int start = level.entrance;
             Vector3Int goal = level.goal;
-            Vector2 v = new Vector2(start.x, start.y);
-            Vector2 w = new Vector2(goal.x, goal.y);
+            Vector2 v = new(start.x, start.y);
+            Vector2 w = new(goal.x, goal.y);
 
             float l2 = Mathf.Pow(w.x - v.x, 2) + Mathf.Pow(w.y - v.y, 2);
 
@@ -230,9 +165,9 @@ namespace ExpressiveRange
                 .ToList();
 
             float averageDistanceToLine = 0;
-            foreach (var item in relevantTiles)
+            foreach (Vector2Int item in relevantTiles)
             {
-                Vector2 p = new Vector2(item.x, item.y);
+                Vector2 p = new(item.x, item.y);
 
                 if (l2 == 0.0)
                 {
@@ -241,7 +176,7 @@ namespace ExpressiveRange
 
                 float t = Math.Max(0, Math.Min(1, Vector2.Dot(p - v, w - v) / l2));
 
-                Vector2 projection = v + t * (w - v);
+                Vector2 projection = v + (t * (w - v));
 
                 averageDistanceToLine -= Vector2.Distance(p, projection) / relevantTiles.Count;
             }
@@ -264,6 +199,7 @@ namespace ExpressiveRange
 
             return averageDistanceToLine;
         }
+
         private double CalculateLinearity(Level level)
         {
             Vector3Int start = level.entrance;
@@ -276,17 +212,17 @@ namespace ExpressiveRange
             //-(12 + 2 * -4) = -4
             Cell entranceCell = level.spaceState.space.Find(cell => cell.roomType == RoomType.Entrance);
             Cell goalCell = level.spaceState.space.Find(cell => cell.roomType == RoomType.Goal);
-            Vector2 cellStart = new Vector2(entranceCell.x, entranceCell.y);
-            Vector2 cellGoal = new Vector2(goalCell.x, goalCell.y);
-            Vector2 v = new Vector2(cellStart.x, cellStart.y);
-            Vector2 w = new Vector2(cellGoal.x, cellGoal.y);
+            Vector2 cellStart = new(entranceCell.x, entranceCell.y);
+            Vector2 cellGoal = new(goalCell.x, goalCell.y);
+            Vector2 v = new(cellStart.x, cellStart.y);
+            Vector2 w = new(cellGoal.x, cellGoal.y);
 
             float l2 = Mathf.Pow(w.x - v.x, 2) + Mathf.Pow(w.y - v.y, 2);
 
             float averageDistanceToLine = 0;
             foreach (Cell cell in level.spaceState.space)
             {
-                Vector2 p = new Vector2(cell.x, cell.y);
+                Vector2 p = new(cell.x, cell.y);
 
                 if (l2 == 0.0)
                 {
@@ -296,60 +232,12 @@ namespace ExpressiveRange
 
                 float t = Math.Max(0, Math.Min(1, Vector2.Dot(p - v, w - v) / l2));
 
-                Vector2 projection = v + t * (w - v);
+                Vector2 projection = v + (t * (w - v));
 
                 averageDistanceToLine -= Vector2.Distance(p, projection) / level.spaceState.space.Count;
             }
 
             return averageDistanceToLine;
-        }
-        //private double CalculateLinearity(Level level)
-        //{
-        //    Vector3Int start = level.entrance;
-        //    Vector3Int goal = level.goal;
-        //    //4x + 2y - 4
-        //    //4x - 4 = -2y
-        //    //-2x + 2 = y
-        //    //4
-        //    //2
-        //    //-(12 + 2 * -4) = -4
-        //    double a = start.y - goal.y;
-        //    double b = goal.x - start.x;
-        //    double c = -(a * (goal.x) + b * (goal.y));
-
-        //    double averageDistanceToLine = 0;
-        //    foreach (Cell cell in level.spaceState.space)
-        //    {
-        //        Vector2Int cellPoint = new Vector2Int(cell.x, cell.y);
-
-        //        // 2 1
-
-        //        //4 * 2 + 2 * 1 - 4 = 6
-
-        //        //6 / sqrt((4 * 4 + 2 * 2))
-
-        //        double distance = Math.Abs(a * cellPoint.x + b * cellPoint.y + c) / Math.Sqrt(a * a + b * b);
-
-        //        averageDistanceToLine -= distance / level.spaceState.space.Count;
-        //    }
-
-        //    return averageDistanceToLine;
-        //}
-        public class Lock
-        {
-            public enum LockType
-            {
-                Lock,
-                LockMulti,
-            }
-            public LockType lockType;
-            public string guid;
-        }
-        private class StringListScriptableTiles
-        {
-            public string guid;
-            public List<ScriptableTile> sTiles = new List<ScriptableTile>();
-            public SpecialNodeType nodeType;
         }
         //private float CalculateShortestPathToWinningPath(Level level)
         //{
@@ -426,10 +314,12 @@ namespace ExpressiveRange
         {
             return level.guidToKeys[guid];
         }
+
         private List<Vector3Int> GetAllKeyMultis(string guid, Level level)
         {
             return level.guidToKeyMultis[guid];
         }
+
         private float GetLeniency(SimpleTileType tileType)
         {
             switch (tileType)
@@ -446,6 +336,134 @@ namespace ExpressiveRange
                     return 0.0f;
             }
         }
+        //private double CalculateLinearity(Level level)
+        //{
+        //    Vector3Int start = level.entrance;
+        //    Vector3Int goal = level.goal;
+        //    //4x + 2y - 4
+        //    //4x - 4 = -2y
+        //    //-2x + 2 = y
+        //    //4
+        //    //2
+        //    //-(12 + 2 * -4) = -4
+        //    double a = start.y - goal.y;
+        //    double b = goal.x - start.x;
+        //    double c = -(a * (goal.x) + b * (goal.y));
+
+        //    double averageDistanceToLine = 0;
+        //    foreach (Cell cell in level.spaceState.space)
+        //    {
+        //        Vector2Int cellPoint = new Vector2Int(cell.x, cell.y);
+
+        //        // 2 1
+
+        //        //4 * 2 + 2 * 1 - 4 = 6
+
+        //        //6 / sqrt((4 * 4 + 2 * 2))
+
+        //        double distance = Math.Abs(a * cellPoint.x + b * cellPoint.y + c) / Math.Sqrt(a * a + b * b);
+
+        //        averageDistanceToLine -= distance / level.spaceState.space.Count;
+        //    }
+
+        //    return averageDistanceToLine;
+        //}
+        public class Lock
+        {
+            public enum LockType
+            {
+                Lock,
+                LockMulti
+            }
+
+            public string guid;
+            public LockType lockType;
+        }
+
+        private class StringListScriptableTiles
+        {
+            public string guid;
+            public SpecialNodeType nodeType;
+            public List<ScriptableTile> sTiles = new();
+        }
+
+#if UNITY_EDITOR
+        private void SaveLevel(Level level, string unityFolderPath, int id)
+        {
+            List<SavedTile> savedTiles = new();
+
+            Dictionary<Tile, string> cachedTileToGuid = new();
+
+            foreach (KeyValuePair<Vector3Int, Tile> pair in level.tilePosToTile)
+            {
+                Vector3Int pos = pair.Key;
+                Tile tile = pair.Value;
+                if (tile == null)
+                {
+                    continue;
+                }
+
+                if (!cachedTileToGuid.ContainsKey(tile))
+                {
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(tile, out string guid, out long localId);
+                    cachedTileToGuid[tile] = guid;
+                }
+
+                savedTiles.Add(new SavedTile {guid = cachedTileToGuid[tile], position = pos});
+            }
+
+            SavedLevelScriptableObject savedLevel = ScriptableObject.CreateInstance<SavedLevelScriptableObject>();
+            savedLevel.savedTiles = savedTiles;
+            savedLevel.name = $"{id}";
+            AssetDatabase.CreateAsset(savedLevel, $"{unityFolderPath}/{id}.asset");
+        }
+
+        [Button]
+        public void SaveLevel()
+        {
+            List<SavedTile> savedTiles = new();
+
+            foreach (Vector3Int position in this.lg.tilemap.cellBounds.allPositionsWithin)
+            {
+                if (this.lg.tilemap.HasTile(position))
+                {
+                    AssetDatabase.TryGetGUIDAndLocalFileIdentifier(this.lg.tilemap.GetTile(position), out string guid,
+                        out long localId);
+                    savedTiles.Add(new SavedTile {guid = guid, position = position});
+                }
+            }
+
+            SavedLevelScriptableObject savedLevel = ScriptableObject.CreateInstance<SavedLevelScriptableObject>();
+            savedLevel.savedTiles = savedTiles;
+            savedLevel.name = $"SavedLevel with {savedTiles.Count} tiles";
+            AssetDatabase.CreateAsset(savedLevel, $"{Constants.SAVED_LEVELS_PATH}/{savedLevel.name}.asset");
+            AssetDatabase.SaveAssets();
+        }
+
+        public string fullRunName;
+        [Button]
+        public void LoadLevel(int id)
+        {
+            this.fullRunName = this.fullRunName;
+            if (id < 0)
+            {
+                return;
+            }
+
+            string unityFolderPath = $"Assets/ExpressiveRangeAnalyses/{this.fullRunName}/{id}.asset";
+
+            SavedLevelScriptableObject savedLevel =
+                AssetDatabase.LoadAssetAtPath<SavedLevelScriptableObject>($"{unityFolderPath}");
+
+            this.lg.RecreateTilemap();
+
+            foreach (SavedTile savedTile in savedLevel.savedTiles)
+            {
+                Tile tile = AssetDatabase.LoadAssetAtPath<Tile>(AssetDatabase.GUIDToAssetPath(savedTile.guid));
+                this.lg.tilemap.SetTile(savedTile.position, tile);
+            }
+        }
+#endif
         //public class Pathfinding
         //{
         //    public const int MAX = 1000;

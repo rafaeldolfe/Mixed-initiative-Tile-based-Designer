@@ -1,48 +1,48 @@
-﻿using Sirenix.OdinInspector;
-using System;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Tilemaps;
-using Utils;
-
-[CreateAssetMenu]
-public class OverflowTile : ScriptableTile
+﻿namespace Tiles
 {
-    public int width;
-    public int height;
-    public ChildTile child;
+    using Sirenix.OdinInspector;
+    using UnityEngine;
+    using UnityEngine.Tilemaps;
 
-    [ShowIf("@width != height")]
-    [ValidateInput("@width != height && invertedVersion == null", defaultMessage: "Non-square overflow tile must have inverted version")]
-    public OverflowTile invertedVersion;
-
-    private void OnValidate()
+    [CreateAssetMenu]
+    public class OverflowTile : ScriptableTile
     {
-        if (width == height)
-        {
-            invertedVersion = null;
-        }
-    }
+        public int width;
+        public int height;
+        public ChildTile child;
 
-    public override bool StartUp(Vector3Int position, ITilemap readOnlyTilemap, GameObject go)
-    {
-        if (!Application.isPlaying)
+        [ShowIf("@width != height")]
+        [ValidateInput("@width != height && invertedVersion == null",
+            "Non-square overflow tile must have inverted version")]
+        public OverflowTile invertedVersion;
+
+        private void OnValidate()
         {
-            return base.StartUp(position, readOnlyTilemap, go);
-        }
-        //Tilemap tilemap = readOnlyTilemap.GetComponent<Tilemap>();
-        for (int i = 0; i < width; i++)
-        {
-            for (int j = 0; j < height; j++)
+            if (this.width == this.height)
             {
-                if (child != null)
-                {
-                    SetTileDelayManager.Instance.Enqueue(position + new Vector3Int(i, j, 0), child);
-                }
-                //tilemap.SetTile(position + new Vector3Int(i, j, 0), child);
+                this.invertedVersion = null;
             }
         }
 
-        return base.StartUp(position, readOnlyTilemap, go);
+        public override bool StartUp(Vector3Int position, ITilemap readOnlyTilemap, GameObject go)
+        {
+            if (!Application.isPlaying)
+            {
+                return base.StartUp(position, readOnlyTilemap, go);
+            }
+
+            //Tilemap tilemap = readOnlyTilemap.GetComponent<Tilemap>();
+            for (int i = 0; i < this.width; i++)
+            for (int j = 0; j < this.height; j++)
+            {
+                if (this.child != null)
+                {
+                    SetTileDelayManager.Instance.Enqueue(position + new Vector3Int(i, j, 0), this.child);
+                }
+            }
+
+            //tilemap.SetTile(position + new Vector3Int(i, j, 0), child);
+            return base.StartUp(position, readOnlyTilemap, go);
+        }
     }
 }

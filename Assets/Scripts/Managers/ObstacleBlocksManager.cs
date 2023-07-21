@@ -1,11 +1,14 @@
-﻿using Sirenix.OdinInspector;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.IO;
+using Sirenix.OdinInspector;
+using Tiles;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 public class ObstacleBlocksManager : MonoBehaviour
 {
+    private const int BORDER_SIZE = 1;
     public bool areInterestBlocks;
     public int sceneWidth;
     public int sceneHeight;
@@ -15,7 +18,6 @@ public class ObstacleBlocksManager : MonoBehaviour
     public Tile border;
     public Tile emptyTile;
     public int spacing;
-    private const int BORDER_SIZE = 1;
 
 
     // Start is called before the first frame update
@@ -31,61 +33,63 @@ public class ObstacleBlocksManager : MonoBehaviour
     [Button]
     public void GenerateBorders()
     {
-        for (int i = 0; i < sceneWidth; i++)
+        for (int i = 0; i < this.sceneWidth; i++)
         {
-            int offsetX = i * (BORDER_SIZE * 2 + obstacleBlockWidth + spacing);
-            for (int j = 0; j < sceneHeight; j++)
+            int offsetX = i * ((BORDER_SIZE * 2) + this.obstacleBlockWidth + this.spacing);
+            for (int j = 0; j < this.sceneHeight; j++)
             {
-                int offsetY = j * (BORDER_SIZE * 2 + obstacleBlockHeight + spacing);
+                int offsetY = j * ((BORDER_SIZE * 2) + this.obstacleBlockHeight + this.spacing);
 
-                for (int x = -1; x < obstacleBlockWidth + 1; x++)
+                for (int x = -1; x < this.obstacleBlockWidth + 1; x++)
                 {
-                    for (int y = -1; y < obstacleBlockHeight + 1; y++)
+                    for (int y = -1; y < this.obstacleBlockHeight + 1; y++)
                     {
-                        if (x == -1 || y == -1 || x == obstacleBlockWidth || y == obstacleBlockHeight)
+                        if (x == -1 || y == -1 || x == this.obstacleBlockWidth || y == this.obstacleBlockHeight)
                         {
-                            tilemap.SetTile(new Vector3Int(x + offsetX, y + offsetY, 0), border);
+                            this.tilemap.SetTile(new Vector3Int(x + offsetX, y + offsetY, 0), this.border);
                         }
-                        else if (!tilemap.HasTile(new Vector3Int(x + offsetX, y + offsetY, 0)))
+                        else if (!this.tilemap.HasTile(new Vector3Int(x + offsetX, y + offsetY, 0)))
                         {
-                            tilemap.SetTile(new Vector3Int(x + offsetX, y + offsetY, 0), emptyTile);
+                            this.tilemap.SetTile(new Vector3Int(x + offsetX, y + offsetY, 0), this.emptyTile);
                         }
                     }
                 }
             }
         }
     }
+
     private string GetFolder()
     {
-        return $"{Constants.OBSTACLE_BLOCK_FOLDER}/{obstacleBlockWidth}x{obstacleBlockHeight}";
+        return $"{Constants.OBSTACLE_BLOCK_FOLDER}/{this.obstacleBlockWidth}x{this.obstacleBlockHeight}";
     }
+
     [Button]
     public void SaveBlocks()
     {
-        for (int i = 0; i < sceneWidth; i++)
+        for (int i = 0; i < this.sceneWidth; i++)
         {
-            int offsetX = i * (BORDER_SIZE * 2 + obstacleBlockWidth + spacing);
-            for (int j = 0; j < sceneHeight; j++)
+            int offsetX = i * ((BORDER_SIZE * 2) + this.obstacleBlockWidth + this.spacing);
+            for (int j = 0; j < this.sceneHeight; j++)
             {
-                int offsetY = j * (BORDER_SIZE * 2 + obstacleBlockHeight + spacing);
+                int offsetY = j * ((BORDER_SIZE * 2) + this.obstacleBlockHeight + this.spacing);
 
-                List<Tile> block = new List<Tile>();
+                List<Tile> block = new();
 
-                for (int x = 0; x < obstacleBlockWidth; x++)
+                for (int x = 0; x < this.obstacleBlockWidth; x++)
                 {
-                    for (int y = 0; y < obstacleBlockHeight; y++)
+                    for (int y = 0; y < this.obstacleBlockHeight; y++)
                     {
-                        block.Add(tilemap.GetTile(new Vector3Int(x + offsetX, y + offsetY, 0)) as Tile);
+                        block.Add(this.tilemap.GetTile(new Vector3Int(x + offsetX, y + offsetY, 0)) as Tile);
                     }
                 }
 
                 ObstacleBlock asset = ScriptableObject.CreateInstance<ObstacleBlock>();
 
-                asset.width = obstacleBlockWidth;
-                asset.height = obstacleBlockHeight;
+                asset.width = this.obstacleBlockWidth;
+                asset.height = this.obstacleBlockHeight;
                 asset.tiles = block;
 
-                CreateAssetInFolder(asset, $"{GetFolder()}", $"Block{j + i * sceneWidth}");
+                this.CreateAssetInFolder(asset, $"{this.GetFolder()}", $"Block{j + (i * this.sceneWidth)}");
                 AssetDatabase.SaveAssets();
             }
         }
@@ -93,7 +97,7 @@ public class ObstacleBlocksManager : MonoBehaviour
 
     public void MoveAssetIntoFolderDangerously(string oldPath, string newPath)
     {
-        string[] pathSegments = newPath.Split(new char[] { '/' });
+        string[] pathSegments = newPath.Split(new[] {'/'});
         string accumulatedpath = Application.dataPath;
         foreach (string segment in pathSegments)
         {
@@ -101,24 +105,27 @@ public class ObstacleBlocksManager : MonoBehaviour
             {
                 continue;
             }
-            if (!System.IO.Directory.Exists($"{accumulatedpath}/{segment}"))
+
+            if (!Directory.Exists($"{accumulatedpath}/{segment}"))
             {
                 string unityPath = accumulatedpath.Substring(accumulatedpath.IndexOf("Assets"));
                 AssetDatabase.CreateFolder(unityPath, segment);
             }
+
             accumulatedpath += "/" + segment;
         }
 
-        if (System.IO.File.Exists(newPath))
+        if (File.Exists(newPath))
         {
             AssetDatabase.DeleteAsset(newPath);
         }
 
         AssetDatabase.MoveAsset(oldPath, newPath);
     }
+
     public void CreateAssetInFolder(Object newAsset, string Folder, string AssetName)
     {
-        string[] pathSegments = Folder.Split(new char[] { '/' });
+        string[] pathSegments = Folder.Split(new[] {'/'});
         string accumulatedpath = Application.dataPath;
         foreach (string segment in pathSegments)
         {
@@ -126,11 +133,13 @@ public class ObstacleBlocksManager : MonoBehaviour
             {
                 continue;
             }
-            if (!System.IO.Directory.Exists($"{accumulatedpath}/{segment}"))
+
+            if (!Directory.Exists($"{accumulatedpath}/{segment}"))
             {
                 string unityPath = accumulatedpath.Substring(accumulatedpath.IndexOf("Assets"));
                 AssetDatabase.CreateFolder(unityPath, segment);
             }
+
             accumulatedpath += "/" + segment;
         }
 
